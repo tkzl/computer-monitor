@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <!-- 联网访问电脑上的监控服务 -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <!-- 读取 Wi-Fi 信息计算子网广播地址，用于自动发现监控服务 -->
+    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
+    <!-- Android 11+ 枚举设备已安装应用（应用列表功能）；低版本忽略 -->
+    <uses-permission android:name="android.permission.QUERY_ALL_PACKAGES"
+        tools:ignore="QueryAllPackagesPermission" />
+
+    <application
+        android:allowBackup="false"
+        android:hardwareAccelerated="true"
+        android:icon="@drawable/ic_launcher"
+        android:label="@string/app_name"
+        android:theme="@style/AppTheme"
+        android:usesCleartextTraffic="true">
+        <!-- usesCleartextTraffic：Android 9 起默认禁止 http 明文，监控服务是局域网 http，需显式允许；低版本忽略此项 -->
+
+        <!-- 原生监控界面：主入口，不依赖 WebView；同时注册为桌面（HOME）候选 -->
+        <activity
+            android:name=".MainActivityNative"
+            android:launchMode="singleTask"
+            android:configChanges="orientation|screenSize|keyboardHidden"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+            <!-- 桌面候选：按 Home 键时系统会询问是否使用本应用作为桌面 -->
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.HOME" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </activity>
+
+        <activity
+            android:name=".WatchActivity"
+            android:configChanges="orientation|screenSize|keyboardHidden"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <activity
+            android:name=".SlideshowActivity"
+            android:configChanges="orientation|screenSize|keyboardHidden"
+            android:exported="false" />
+
+        <activity
+            android:name=".SlideshowListActivity"
+            android:configChanges="orientation|screenSize|keyboardHidden"
+            android:exported="false" />
+    </application>
+</manifest>

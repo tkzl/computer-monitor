@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:background="@drawable/card_bg"
+    android:orientation="vertical"
+    android:padding="6dp">
+
+    <ImageView
+        android:id="@+id/image_slideshow_preview"
+        android:layout_width="match_parent"
+        android:layout_height="118dp"
+        android:background="@color/hud_track"
+        android:contentDescription="幻灯片缩略图"
+        android:scaleType="centerCrop" />
+
+    <TextView
+        android:id="@+id/text_slideshow_preview_name"
+        android:layout_width="match_parent"
+        android:layout_height="40dp"
+        android:ellipsize="end"
+        android:fontFamily="monospace"
+        android:gravity="center_vertical"
+        android:maxLines="2"
+        android:paddingLeft="3dp"
+        android:paddingRight="3dp"
+        android:textColor="@color/text"
+        android:textSize="11sp" />
+</LinearLayout>

@@ -1,0 +1,742 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>电脑运行监控 · SYSTEM MONITOR</title>
+<style>
+  :root {
+    --bg: #04070f;
+    --bg-2: #071019;
+    --panel-edge: rgba(0, 229, 255, 0.32);
+    --text: #d7f4ff;
+    --muted: #6f8aa5;
+    --accent: #00e5ff;      /* 霓虹青 */
+    --accent-2: #ff2d95;    /* 品红 */
+    --green: #37ffb4;
+    --yellow: #ffc857;
+    --red: #ff4d5e;
+    --mono: "Consolas", "SF Mono", "JetBrains Mono", "Courier New", monospace;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { min-height: 100vh; }
+  body {
+    background:
+      radial-gradient(1200px 600px at 70% -10%, rgba(0,120,180,.16), transparent 60%),
+      radial-gradient(900px 500px at 12% 112%, rgba(120,0,180,.13), transparent 60%),
+      linear-gradient(180deg, var(--bg) 0%, var(--bg-2) 100%);
+    color: var(--text);
+    font-family: "Segoe UI", "Microsoft YaHei", system-ui, sans-serif;
+    padding: 26px 30px 48px;
+    position: relative;
+    overflow-x: hidden;
+  }
+  /* 背景网格 */
+  body::before {
+    content: ""; position: fixed; top: 0; left: 0; right: 0; bottom: 0; pointer-events: none; z-index: 0;
+    background-image:
+      linear-gradient(rgba(0,229,255,.05) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,229,255,.05) 1px, transparent 1px);
+    background-size: 42px 42px;
+    -webkit-mask-image: radial-gradient(1200px 800px at 50% 30%, #000 30%, transparent 90%);
+            mask-image: radial-gradient(1200px 800px at 50% 30%, #000 30%, transparent 90%);
+  }
+  /* 扫描线 */
+  body::after {
+    content: ""; position: fixed; top: 0; left: 0; right: 0; bottom: 0; pointer-events: none; z-index: 40;
+    background: repeating-linear-gradient(0deg, rgba(0,0,0,.16) 0 1px, transparent 1px 3px);
+    opacity: .35;
+  }
+  header, .grid { position: relative; z-index: 1; }
+
+  header {
+    display: flex; align-items: flex-end; flex-wrap: wrap;
+    margin-bottom: 24px;
+  }
+  /* Android 7 WebView 不支持 flex gap，用子元素 margin 模拟 */
+  header > * { margin: 0 18px 8px 0; }
+  header h1 {
+    font-size: 26px; font-weight: 700; letter-spacing: 6px; text-transform: uppercase;
+    color: #eaffff;
+    text-shadow: 0 0 6px rgba(0,229,255,.7), 0 0 24px rgba(0,229,255,.4);
+    position: relative; padding-bottom: 8px;
+  }
+  header h1::after {
+    content: ""; position: absolute; left: 0; bottom: 0; height: 2px; width: 130px;
+    background: linear-gradient(90deg, var(--accent), transparent);
+    box-shadow: 0 0 8px rgba(0,229,255,.8);
+  }
+  .subtitle {
+    font-family: var(--mono); font-size: 11px; letter-spacing: 3px;
+    color: rgba(0,229,255,.6); text-transform: uppercase; align-self: center;
+  }
+  header .meta { color: var(--muted); font-size: 13px; font-family: var(--mono); letter-spacing: .5px; }
+  header .meta b { color: var(--accent); font-weight: 600; }
+  /* 万年历大时钟：秒级时间 + 公历日期星期 + 农历干支 */
+  .hero-clock { margin-left: auto; text-align: right; line-height: 1.12; padding-bottom: 2px; }
+  .hero-time {
+    font-family: var(--mono); font-size: 46px; font-weight: 700; letter-spacing: 2px;
+    color: #eaffff;
+    text-shadow: 0 0 8px rgba(0,229,255,.85), 0 0 30px rgba(0,229,255,.45);
+    font-variant-numeric: tabular-nums;
+  }
+  .hero-date { font-family: var(--mono); font-size: 14px; color: var(--accent); letter-spacing: 1px; margin-top: 4px; }
+  .hero-lunar { font-size: 14px; color: var(--yellow); letter-spacing: 2px; margin-top: 2px; }
+  #status-dot {
+    display: inline-block; width: 9px; height: 9px; border-radius: 50%;
+    background: var(--red); margin-right: 7px; vertical-align: middle;
+    box-shadow: 0 0 8px var(--red);
+  }
+  #status-dot.ok { background: var(--green); box-shadow: 0 0 10px var(--green); animation: pulse 1.6s infinite; }
+  @keyframes pulse { 0%,100% { opacity:1; transform:scale(1);} 50% { opacity:.55; transform:scale(.85);} }
+
+  .grid {
+    display: flex; flex-wrap: wrap;
+    margin: 0 -9px;
+  }
+  .grid > .card { flex: 1 1 280px; min-width: 280px; margin: 0 9px 18px; }
+  .grid > .card.metric-card { flex: 1 1 calc(50% - 18px); }
+  .grid > .card.detail-net { flex: 1.1 1 0; min-width: 0; }
+  .grid > .card.detail-disk { flex: 1.3 1 0; min-width: 0; }
+  .grid > .card.detail-gpu { flex: .9 1 0; min-width: 0; }
+  .card {
+    background: linear-gradient(180deg, rgba(10,26,40,.65), rgba(6,14,24,.78));
+    border: 1px solid var(--panel-edge);
+    border-radius: 8px;
+    padding: 20px 20px 18px;
+    position: relative;
+    backdrop-filter: blur(6px);
+    box-shadow: inset 0 0 24px rgba(0,180,255,.05), 0 6px 24px rgba(0,0,0,.45);
+    transition: border-color .3s, box-shadow .3s;
+  }
+  .card:hover {
+    border-color: rgba(0,229,255,.65);
+    box-shadow: inset 0 0 28px rgba(0,200,255,.08), 0 0 18px rgba(0,229,255,.18), 0 8px 28px rgba(0,0,0,.5);
+  }
+  /* HUD 边角 */
+  .card::before, .card::after { content: ""; position: absolute; width: 14px; height: 14px; pointer-events: none; }
+  .card::before { top: -1px; left: -1px; border-top: 2px solid var(--accent); border-left: 2px solid var(--accent); }
+  .card::after  { bottom: -1px; right: -1px; border-bottom: 2px solid var(--accent); border-right: 2px solid var(--accent); }
+  .card h2 {
+    font-size: 12px; font-weight: 700; color: var(--accent);
+    letter-spacing: 3px; text-transform: uppercase; margin-bottom: 14px;
+    display: flex; align-items: center;
+    text-shadow: 0 0 8px rgba(0,229,255,.5);
+  }
+  .card h2::before { content: ""; width: 14px; height: 2px; margin-right: 8px; background: var(--accent); box-shadow: 0 0 6px var(--accent); }
+
+  .big-num {
+    font-size: 38px; font-weight: 700; line-height: 1.05; font-family: var(--mono);
+    color: #eaffff; text-shadow: 0 0 10px rgba(0,229,255,.55), 0 0 30px rgba(0,229,255,.3);
+  }
+  .big-num small { font-size: 16px; color: var(--muted); font-weight: 400; text-shadow: none; }
+  .bar {
+    height: 10px; background: rgba(255,255,255,.05);
+    border: 1px solid rgba(0,229,255,.15); border-radius: 3px;
+    overflow: hidden; margin-top: 12px; position: relative;
+  }
+  .bar > div {
+    height: 100%; border-radius: 2px; transition: width .6s ease;
+    background: linear-gradient(90deg, #00e5ff, #37ffb4);
+    box-shadow: 0 0 10px rgba(0,229,255,.6);
+  }
+  .sub { color: var(--muted); font-size: 12px; margin-top: 8px; font-family: var(--mono); }
+  .cores {
+    display: flex; flex-wrap: wrap; margin-top: 14px;
+  }
+  .core {
+    flex: 1 1 14px; min-width: 14px; max-width: 24px;
+    height: 24px; border-radius: 2px; background: rgba(255,255,255,.06);
+    position: relative; overflow: hidden; border: 1px solid rgba(0,229,255,.08);
+    margin: 0 4px 4px 0;
+  }
+  .core i {
+    position: absolute; bottom: 0; left: 0; right: 0;
+    background: linear-gradient(180deg, #00e5ff, #0077ff);
+    transition: height .6s ease; box-shadow: 0 0 8px rgba(0,229,255,.5);
+  }
+  .disk-row { margin-bottom: 14px; }
+  .disk-row:last-child { margin-bottom: 0; }
+  .disk-row .lbl { display: flex; justify-content: space-between; font-size: 12px; color: var(--muted); margin-bottom: 5px; font-family: var(--mono); }
+
+  .proc-card { flex: 1 1 100%; }
+  .table-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; font-family: var(--mono); }
+  th, td { text-align: left; padding: 8px 12px; white-space: nowrap; }
+  th {
+    color: var(--accent); font-weight: 700; font-size: 11px; letter-spacing: 1.5px;
+    text-transform: uppercase; border-bottom: 1px solid rgba(0,229,255,.35);
+  }
+  tbody tr { border-bottom: 1px solid rgba(0,229,255,.08); transition: background .2s, box-shadow .2s; }
+  tbody tr:hover { background: rgba(0,229,255,.08); box-shadow: inset 3px 0 0 var(--accent); }
+  td { color: #bfe9ff; }
+  td.num { text-align: right; font-variant-numeric: tabular-nums; }
+  th.num { text-align: right; }
+  .pname { max-width: 260px; overflow: hidden; text-overflow: ellipsis; }
+  .ports { font-variant-numeric: tabular-nums; opacity: .75; max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .pill {
+    display: inline-block; min-width: 46px; text-align: center;
+    padding: 2px 8px; border-radius: 3px; font-size: 12px; font-family: var(--mono);
+    background: rgba(0,229,255,.08); border: 1px solid rgba(0,229,255,.25); color: var(--text);
+  }
+  th.sortable { cursor: pointer; user-select: none; }
+  th.sortable:hover { color: #eaffff; text-shadow: 0 0 8px rgba(0,229,255,.8); }
+  th.sortable .arrow { margin-left: 5px; font-size: 10px; color: var(--accent); }
+  .view-toggle { margin: -6px 0 12px; display: flex; }
+  .view-toggle button { margin-right: 8px; }
+  .view-toggle button {
+    font-family: var(--mono); font-size: 11px; letter-spacing: 1px;
+    color: var(--accent); background: transparent;
+    border: 1px solid rgba(0,229,255,.35); border-radius: 3px;
+    padding: 4px 12px; cursor: pointer; transition: all .2s;
+  }
+  .view-toggle button:hover { border-color: var(--accent); text-shadow: 0 0 6px rgba(0,229,255,.8); }
+  .view-toggle button.active {
+    background: rgba(0,229,255,.15); color: #eaffff;
+    box-shadow: 0 0 10px rgba(0,229,255,.35), inset 0 0 8px rgba(0,229,255,.15);
+  }
+  .count-badge { color: var(--accent-2); font-size: 11px; margin-left: 6px; text-shadow: 0 0 6px rgba(255,45,149,.6); }
+  canvas.spark-cv { width: 100%; height: 36px; display: block; margin-top: 12px; }
+
+  /* 温度卡片 */
+  .temp-grid { display: flex; margin: 0 -8px; }
+  .temp-item {
+    flex: 1; text-align: center; padding: 10px 6px; margin: 0 8px;
+    background: rgba(0,229,255,.05); border: 1px solid rgba(0,229,255,.18);
+    border-radius: 6px;
+  }
+  .temp-label {
+    font-size: 11px; letter-spacing: 2px; color: var(--muted);
+    font-family: var(--mono); margin-bottom: 6px;
+  }
+  .temp-value {
+    font-family: var(--mono); font-size: 30px; font-weight: 700; line-height: 1.1;
+    color: #eaffff; text-shadow: 0 0 10px rgba(0,229,255,.55);
+  }
+  .temp-value.warm { color: var(--yellow); text-shadow: 0 0 10px rgba(255,200,87,.55); }
+  .temp-value.hot { color: var(--red); text-shadow: 0 0 10px rgba(255,77,94,.55); }
+  .temp-disks { margin-top: 12px; }
+  .network-temp { margin-top: 18px; }
+  .temp-disk-row {
+    display: flex; justify-content: space-between; align-items: center;
+    font-size: 12px; font-family: var(--mono); color: var(--muted);
+    padding: 4px 0; border-top: 1px dashed rgba(0,229,255,.12);
+  }
+  .temp-disk-row:first-child { border-top: none; }
+  .temp-disk-row b { color: var(--text); font-weight: 600; }
+
+  /* 减少动效偏好 */
+  @media (prefers-reduced-motion: reduce) {
+    * { animation: none !important; transition: none !important; }
+    body::after { display: none; }
+  }
+
+  /* ===== 小屏幕（手机竖屏）适配 ===== */
+  @media (max-width: 640px) {
+    body { padding: 14px 12px 30px; }
+    header { margin-bottom: 16px; }
+    header > * { margin: 0 14px 8px 0; }
+    header h1 { font-size: 18px; width: 100%; letter-spacing: 3px; }
+    header .meta { font-size: 12px; }
+    .hero-clock { width: 100%; text-align: left; margin-left: 0; }
+    .hero-time { font-size: 34px; }
+    .hero-date { font-size: 12px; }
+    .hero-lunar { font-size: 12px; }
+    .grid { margin: 0 -6px; }
+    .grid > .card,
+    .grid > .card.metric-card,
+    .grid > .card.detail-net,
+    .grid > .card.detail-disk,
+    .grid > .card.detail-gpu { flex: 1 1 100%; min-width: 0; margin: 0 6px 12px; }
+    .card { padding: 16px 14px; }
+    .big-num { font-size: 30px; }
+    .proc-card { overflow: visible; }
+    .table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; margin: 0 -14px; padding: 0 14px; }
+    table { font-size: 12px; min-width: 420px; }
+    th, td { padding: 6px 8px; }
+    .pname { max-width: 150px; }
+    .core { height: 18px; }
+    body::after { opacity: .18; }
+  }
+</style>
+</head>
+<body>
+  <header>
+    <h1>电脑运行监控</h1>
+    <span class="subtitle">System Monitor // Realtime</span>
+    <span class="meta"><span id="status-dot"></span><span id="conn-state">连接中…</span></span>
+    <span class="meta">开机时长 <b id="uptime">-</b></span>
+    <span class="meta">进程总数 <b id="proc-count">-</b></span>
+    <span class="meta">刷新于 <b id="update-time">-</b></span>
+    <div class="hero-clock">
+      <div class="hero-time" id="clock">--:--:--</div>
+      <div class="hero-date" id="cal-date">----</div>
+      <div class="hero-lunar" id="cal-lunar">----</div>
+    </div>
+  </header>
+
+  <div class="grid">
+    <div class="card metric-card">
+      <h2>CPU 使用率</h2>
+      <div class="big-num"><span id="cpu-percent">-</span><small> %</small></div>
+      <div class="bar"><div id="cpu-bar" style="width:0%"></div></div>
+      <div class="cores" id="cores" title="各逻辑核心使用率"></div>
+      <canvas class="spark-cv" id="cpu-spark" height="36"></canvas>
+    </div>
+
+    <div class="card metric-card">
+      <h2>内存</h2>
+      <div class="big-num"><span id="mem-percent">-</span><small> %</small></div>
+      <div class="bar"><div id="mem-bar" style="width:0%"></div></div>
+      <div class="sub" id="mem-detail">-</div>
+      <canvas class="spark-cv" id="mem-spark" height="36"></canvas>
+    </div>
+
+    <div class="card detail-net">
+      <h2>网络速率</h2>
+      <div class="sub" style="margin-top:2px">↓ 下载 <b id="net-down" class="big-num" style="font-size:22px">-</b></div>
+      <div class="sub" style="margin-top:8px">↑ 上传 <b id="net-up" class="big-num" style="font-size:22px">-</b></div>
+      <div class="sub" id="net-total">-</div>
+      <div class="network-temp">
+        <h2>温度</h2>
+        <div class="temp-grid">
+          <div class="temp-item">
+            <div class="temp-label">CPU</div>
+            <div class="temp-value" id="temp-cpu">-</div>
+          </div>
+        </div>
+        <div class="temp-disks" id="temp-disks"></div>
+      </div>
+    </div>
+
+    <div class="card detail-disk">
+      <h2>磁盘用量</h2>
+      <div class="sub" id="disk-io">读写速率：-</div>
+      <div id="disks">-</div>
+    </div>
+
+    <div class="card detail-gpu">
+      <h2>GPU</h2>
+      <div class="sub" id="gpu-name" style="margin-bottom:6px"></div>
+      <div style="display:flex;gap:18px;align-items:flex-end;flex-wrap:wrap">
+        <div>
+          <div class="temp-label">使用率</div>
+          <div class="big-num" id="gpu-util" style="font-size:22px">-</div>
+          <div id="gpu-util-bar" style="width:100px;height:6px;background:#1a2233;border-radius:3px;margin-top:4px;overflow:hidden">
+            <div id="gpu-util-fill" style="height:100%;width:0%;background:#00E5FF;border-radius:3px;transition:width .3s"></div>
+          </div>
+        </div>
+        <div>
+          <div class="temp-label">显存</div>
+          <div class="big-num" id="gpu-mem" style="font-size:16px">-</div>
+        </div>
+        <div>
+          <div class="temp-label">温度</div>
+          <div class="temp-value" id="temp-gpu">-</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card proc-card">
+      <h2>进程排行（点击表头排序）</h2>
+      <div class="view-toggle">
+        <button id="view-grouped" class="active" type="button">合并视图</button>
+        <button id="view-single" type="button">单进程视图</button>
+      </div>
+      <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>PID</th><th>进程名</th>
+            <th class="num sortable" data-key="cpu">CPU %<span class="arrow"></span></th>
+            <th class="num sortable" data-key="mem_percent">内存 %<span class="arrow"></span></th>
+            <th class="num sortable" data-key="mem_rss">内存占用<span class="arrow"></span></th>
+            <th>端口</th>
+          </tr>
+        </thead>
+        <tbody id="proc-body"></tbody>
+      </table>
+      </div>
+    </div>
+  </div>
+
+<script>
+(function () {
+  var MAX_POINTS = 60;
+  var cpuHist = [], memHist = [];
+
+  function fmtBytes(b) {
+    if (b == null || isNaN(b)) return "-";
+    var u = ["B", "KB", "MB", "GB", "TB"], i = 0;
+    b = Number(b);
+    while (b >= 1024 && i < u.length - 1) { b /= 1024; i++; }
+    return b.toFixed(b >= 100 || i === 0 ? 0 : 1) + " " + u[i];
+  }
+  function fmtRate(b) { return fmtBytes(b) + "/s"; }
+  function fmtDur(sec) {
+    sec = Math.max(0, Math.floor(sec));
+    var d = Math.floor(sec / 86400), h = Math.floor(sec % 86400 / 3600),
+        m = Math.floor(sec % 3600 / 60);
+    var s = "";
+    if (d) s += d + " 天 ";
+    if (h || d) s += h + " 小时 ";
+    return s + m + " 分钟";
+  }
+  function barColor(p) {
+    if (p >= 90) return "linear-gradient(90deg,#ff4d5e,#ff2d95)";
+    if (p >= 70) return "linear-gradient(90deg,#ffc857,#ff8c00)";
+    return "linear-gradient(90deg,#00e5ff,#37ffb4)";
+  }
+  function pillColor(p) {
+    if (p >= 50) return "#ff4d5e";
+    if (p >= 20) return "#ffc857";
+    return "#37ffb4";
+  }
+  function setText(id, v) { document.getElementById(id).textContent = v; }
+
+  function drawSpark(id, data, color) {
+    var cv = document.getElementById(id);
+    if (!cv) return;
+    var ctx = cv.getContext("2d");
+    var w = cv.width = cv.clientWidth || 200;
+    var h = cv.height = 36;
+    ctx.clearRect(0, 0, w, h);
+    if (data.length < 2) return;
+    ctx.beginPath();
+    for (var i = 0; i < data.length; i++) {
+      var x = i / (MAX_POINTS - 1) * w;
+      var y = h - (Math.min(100, data[i]) / 100) * (h - 2) - 1;
+      if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+    }
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 1.5;
+    ctx.shadowColor = color;   // 霓虹辉光
+    ctx.shadowBlur = 6;
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+    ctx.lineTo((data.length - 1) / (MAX_POINTS - 1) * w, h);
+    ctx.lineTo(0, h);
+    ctx.closePath();
+    ctx.globalAlpha = 0.12;
+    ctx.fillStyle = color;
+    ctx.fill();
+    ctx.globalAlpha = 1;
+  }
+
+  function renderCores(cores) {
+    var box = document.getElementById("cores");
+    if (box.childElementCount !== cores.length) {
+      box.innerHTML = "";
+      cores.forEach(function (_, i) {
+        var d = document.createElement("div");
+        d.className = "core";
+        d.title = "核心 " + (i + 1);
+        var fill = document.createElement("i");
+        d.appendChild(fill);
+        box.appendChild(d);
+      });
+    }
+    Array.prototype.forEach.call(box.children, function (d, i) {
+      var p = cores[i] || 0;
+      d.firstChild.style.height = p + "%";
+      d.firstChild.style.background = barColor(p);
+      d.title = "核心 " + (i + 1) + "：" + p.toFixed(0) + "%";
+    });
+  }
+
+  function renderDisks(disks, io) {
+    var box = document.getElementById("disks");
+    box.innerHTML = "";
+    setText("disk-io", io ?
+      "实时：读取 " + fmtRate(io.read_rate || 0) + " · 写入 " + fmtRate(io.write_rate || 0) +
+      " · 忙碌 " + (io.busy_avail ? (io.busy_percent || 0).toFixed(1) + "%" : "N/A") : "读写速率：-");
+    if (!disks || !disks.length) { box.textContent = "无磁盘信息"; return; }
+    disks.forEach(function (d) {
+      var row = document.createElement("div");
+      row.className = "disk-row";
+      row.innerHTML =
+        '<div class="lbl"><span>' + d.mount + '</span><span>' +
+        fmtBytes(d.used) + " / " + fmtBytes(d.total) + " · " + d.percent.toFixed(1) + "%</span></div>" +
+        '<div class="bar"><div style="width:' + d.percent + '%;background:' + barColor(d.percent) + '"></div></div>';
+      box.appendChild(row);
+    });
+  }
+
+  var sortKey = "cpu"; // 当前排序键，默认按 CPU 降序
+  var procView = "grouped"; // 当前视图：grouped 合并视图 / single 单进程视图
+  var procData = { grouped: [], single: [] }; // 缓存两类数据，切换视图时无需等新帧
+
+  // 温度值按等级变色：<70 正常，70-85 偏高，>=85 高温
+  function tempClass(t) {
+    if (t >= 85) return "hot";
+    if (t >= 70) return "warm";
+    return "";
+  }
+
+  function renderTemperatures(temp) {
+    if (!temp) return;
+    var cpuEl = document.getElementById("temp-cpu");
+    if (temp.cpu_temp_avail) {
+      cpuEl.textContent = temp.cpu_temp.toFixed(1) + "°";
+      cpuEl.className = "temp-value " + tempClass(temp.cpu_temp);
+    } else {
+      cpuEl.textContent = "N/A";
+      cpuEl.className = "temp-value";
+    }
+    var diskBox = document.getElementById("temp-disks");
+    diskBox.innerHTML = "";
+    (temp.disks || []).forEach(function (d) {
+      var row = document.createElement("div");
+      row.className = "temp-disk-row";
+      var val = d.avail ? d.temp.toFixed(1) + "°C" : "N/A";
+      row.innerHTML = '<span title="' + d.name + '">' + d.name + '</span><b>' + val + "</b>";
+      diskBox.appendChild(row);
+    });
+
+    // GPU 数据卡片
+    setText("gpu-name", temp.gpu_name || "N/A");
+    var gpuUtilEl = document.getElementById("gpu-util");
+    var gpuFill = document.getElementById("gpu-util-fill");
+    if (temp.gpu_util_avail) {
+      gpuUtilEl.textContent = Math.round(temp.gpu_util) + "%";
+      gpuFill.style.width = Math.min(100, Math.max(0, temp.gpu_util)) + "%";
+      gpuFill.style.background = temp.gpu_util > 90 ? "#FF4D5E" : temp.gpu_util > 70 ? "#FFC857" : "#00E5FF";
+    } else {
+      gpuUtilEl.textContent = "N/A";
+      gpuFill.style.width = "0%";
+    }
+    var gpuMemEl = document.getElementById("gpu-mem");
+    if (temp.gpu_mem_used_avail && temp.gpu_mem_total > 0) {
+      gpuMemEl.textContent = fmtBytes(temp.gpu_mem_used) + " / " + fmtBytes(temp.gpu_mem_total);
+    } else {
+      gpuMemEl.textContent = "N/A";
+    }
+    var gpuTempEl = document.getElementById("temp-gpu");
+    if (temp.gpu_temp_avail) {
+      gpuTempEl.textContent = temp.gpu_temp.toFixed(1) + "°";
+      gpuTempEl.className = "temp-value " + tempClass(temp.gpu_temp);
+    } else {
+      gpuTempEl.textContent = "N/A";
+      gpuTempEl.className = "temp-value";
+    }
+  }
+
+  function renderProcs() {
+    var body = document.getElementById("proc-body");
+    body.innerHTML = "";
+    var list = (procData[procView] || []).slice().sort(function (a, b) {
+      return (b[sortKey] || 0) - (a[sortKey] || 0); // 始终降序
+    });
+    list.forEach(function (p) {
+      var countTag = (p.count && p.count > 1)
+        ? '<span class="count-badge">×' + p.count + "</span>" : "";
+      // 端口：无监听端口留空；过多时截断显示，完整列表放 title
+      var ports = p.ports || [];
+      var portText = "";
+      if (ports.length) {
+        portText = ports.length > 6
+          ? ports.slice(0, 6).join(", ") + " +" + (ports.length - 6)
+          : ports.join(", ");
+      }
+      var tr = document.createElement("tr");
+      tr.innerHTML =
+        "<td>" + p.pid + "</td>" +
+        '<td class="pname" title="' + p.name + '">' + p.name + countTag + "</td>" +
+        '<td class="num"><span class="pill" style="color:' + pillColor(p.cpu) + '">' + p.cpu.toFixed(1) + "</span></td>" +
+        '<td class="num">' + p.mem_percent.toFixed(2) + "</td>" +
+        '<td class="num">' + fmtBytes(p.mem_rss) + "</td>" +
+        '<td class="ports" title="' + ports.join(", ") + '">' + portText + "</td>";
+      body.appendChild(tr);
+    });
+  }
+
+  function initViewToggle() {
+    ["grouped", "single"].forEach(function (v) {
+      var btn = document.getElementById("view-" + v);
+      btn.addEventListener("click", function () {
+        if (procView === v) return;
+        procView = v;
+        document.getElementById("view-grouped").className = (v === "grouped") ? "active" : "";
+        document.getElementById("view-single").className = (v === "single") ? "active" : "";
+        renderProcs(); // 立即用缓存数据重排，无需等待下一帧推送
+      });
+    });
+  }
+
+  function initSortHeaders() {
+    var ths = document.querySelectorAll("th.sortable");
+    Array.prototype.forEach.call(ths, function (th) {
+      th.addEventListener("click", function () {
+        sortKey = th.getAttribute("data-key");
+        Array.prototype.forEach.call(ths, function (t) {
+          t.querySelector(".arrow").textContent = "";
+        });
+        th.querySelector(".arrow").textContent = "▼";
+        renderProcs(); // 立即用缓存数据重排
+      });
+    });
+    // 默认箭头标在 CPU 列
+    var first = document.querySelector('th.sortable[data-key="cpu"] .arrow');
+    if (first) first.textContent = "▼";
+  }
+
+  function push(arr, v) {
+    arr.push(v);
+    if (arr.length > MAX_POINTS) arr.shift();
+  }
+
+  function setConn(ok) {
+    var dot = document.getElementById("status-dot");
+    dot.className = ok ? "ok" : "";
+    setText("conn-state", ok ? "已连接" : "连接断开，重试中…");
+  }
+
+  function renderStats(d) {
+    setConn(true);
+    setText("cpu-percent", d.cpu.percent.toFixed(1));
+    var cb = document.getElementById("cpu-bar");
+    cb.style.width = d.cpu.percent + "%";
+    cb.style.background = barColor(d.cpu.percent);
+    renderCores(d.cpu.per_core || []);
+
+    setText("mem-percent", d.memory.percent.toFixed(1));
+    var mb = document.getElementById("mem-bar");
+    mb.style.width = d.memory.percent + "%";
+    mb.style.background = barColor(d.memory.percent);
+    setText("mem-detail",
+      "已用 " + fmtBytes(d.memory.used) + " / 共 " + fmtBytes(d.memory.total) +
+      "，可用 " + fmtBytes(d.memory.available));
+
+    setText("net-down", fmtRate(d.network.recv_rate));
+    setText("net-up", fmtRate(d.network.sent_rate));
+    setText("net-total",
+      (d.network.interface ? d.network.interface + " · " : "") +
+      "本次开机累计：下载 " + fmtBytes(d.network.bytes_recv) +
+      "，上传 " + fmtBytes(d.network.bytes_sent));
+
+    renderDisks(d.disks, d.disk_io);
+    renderTemperatures(d.temperature);
+    procData.grouped = d.processes || [];
+    procData.single = d.processes_single || [];
+    renderProcs();
+
+    setText("uptime", fmtDur(d.system.uptime));
+    setText("proc-count", d.system.proc_count);
+    setText("update-time", new Date(d.time * 1000).toLocaleTimeString());
+
+    push(cpuHist, d.cpu.percent);
+    push(memHist, d.memory.percent);
+    drawSpark("cpu-spark", cpuHist, "#00e5ff");
+    drawSpark("mem-spark", memHist, "#37ffb4");
+  }
+
+  function connectStream() {
+    var es = new EventSource("/api/stream");
+    es.onmessage = function (ev) {
+      try {
+        renderStats(JSON.parse(ev.data));
+      } catch (e) { /* 忽略损坏的数据帧 */ }
+    };
+    es.onerror = function () { setConn(false); };
+    // EventSource 断开后会自动重连，无需手动处理
+  }
+
+  // ---------- 万年历：公历转农历（数据表覆盖 1900-2100） ----------
+  var LUNAR_INFO = [
+    0x04bd8,0x04ae0,0x0a570,0x054d5,0x0d260,0x0d950,0x16554,0x056a0,0x09ad0,0x055d2,
+    0x04ae0,0x0a5b6,0x0a4d0,0x0d250,0x1d255,0x0b540,0x0d6a0,0x0ada2,0x095b0,0x14977,
+    0x04970,0x0a4b0,0x0b4b5,0x06a50,0x06d40,0x1ab54,0x02b60,0x09570,0x052f2,0x04970,
+    0x06566,0x0d4a0,0x0ea50,0x06e95,0x05ad0,0x02b60,0x186e3,0x092e0,0x1c8d7,0x0c950,
+    0x0d4a0,0x1d8a6,0x0b550,0x056a0,0x1a5b4,0x025d0,0x092d0,0x0d2b2,0x0a950,0x0b557,
+    0x06ca0,0x0b550,0x15355,0x04da0,0x0a5b0,0x14573,0x052b0,0x0a9a8,0x0e950,0x06aa0,
+    0x0aea6,0x0ab50,0x04b60,0x0aae4,0x0a570,0x05260,0x0f263,0x0d950,0x05b57,0x056a0,
+    0x096d0,0x04dd5,0x04ad0,0x0a4d0,0x0d4d4,0x0d250,0x0d558,0x0b540,0x0b6a0,0x195a6,
+    0x095b0,0x049b0,0x0a974,0x0a4b0,0x0b27a,0x06a50,0x06d40,0x0af46,0x0ab60,0x09570,
+    0x04af5,0x04970,0x064b0,0x074a3,0x0ea50,0x06b58,0x055c0,0x0ab60,0x096d5,0x092e0,
+    0x0c960,0x0d954,0x0d4a0,0x0da50,0x07552,0x056a0,0x0abb7,0x025d0,0x092d0,0x0cab5,
+    0x0a950,0x0b4a0,0x0baa4,0x0ad50,0x055d9,0x04ba0,0x0a5b0,0x15176,0x052b0,0x0a930,
+    0x07954,0x06aa0,0x0ad50,0x05b52,0x04b60,0x0a6e6,0x0a4e0,0x0d260,0x0ea65,0x0d530,
+    0x05aa0,0x076a3,0x096d0,0x04afb,0x04ad0,0x0a4d0,0x1d0b6,0x0d250,0x0d520,0x0dd45,
+    0x0b5a0,0x056d0,0x055b2,0x049b0,0x0a577,0x0a4b0,0x0aa50,0x1b255,0x06d20,0x0ada0,
+    0x14b63,0x09370,0x049f8,0x04970,0x064b0,0x168a6,0x0ea50,0x06b20,0x1a6c4,0x0aae0,
+    0x0a2e0,0x0d2e3,0x0c960,0x0d557,0x0d4a0,0x0da50,0x05d55,0x056a0,0x0a6d0,0x055d4,
+    0x052d0,0x0a9b8,0x0a950,0x0b4a0,0x0b6a6,0x0ad50,0x055a0,0x0aba4,0x0a5b0,0x052b0,
+    0x0b273,0x06930,0x07337,0x06aa0,0x0ad50,0x14b55,0x04b60,0x0a570,0x054e4,0x0d160,
+    0x0e968,0x0d520,0x0daa0,0x16aa6,0x056d0,0x04ae0,0x0a9d4,0x0a2d0,0x0d150,0x0f252,
+    0x0d520];
+  var GAN = "甲乙丙丁戊己庚辛壬癸", ZHI = "子丑寅卯辰巳午未申酉戌亥";
+  var ANIMAL = "鼠牛虎兔龙蛇马羊猴鸡狗猪";
+  var NS1 = "日一二三四五六七八九十", NS2 = "初十廿卅", NS3 = "正二三四五六七八九十冬腊";
+
+  function lunarLeapMonth(y) { return LUNAR_INFO[y - 1900] & 0xf; }
+  function lunarLeapDays(y) { return lunarLeapMonth(y) ? ((LUNAR_INFO[y - 1900] & 0x10000) ? 30 : 29) : 0; }
+  function lunarMonthDays(y, m) { return (LUNAR_INFO[y - 1900] & (0x10000 >> m)) ? 30 : 29; }
+  function lunarYearDays(y) {
+    var sum = 348;
+    for (var i = 0x8000; i > 0x8; i >>= 1) sum += (LUNAR_INFO[y - 1900] & i) ? 1 : 0;
+    return sum + lunarLeapDays(y);
+  }
+  function ganzhiYear(y) {
+    var g = (y - 3) % 10, z = (y - 3) % 12;
+    if (g === 0) g = 10;
+    if (z === 0) z = 12;
+    return GAN.charAt(g - 1) + ZHI.charAt(z - 1);
+  }
+  function lunarDayName(d) {
+    if (d === 10) return "初十";
+    if (d === 20) return "二十";
+    if (d === 30) return "三十";
+    return NS2.charAt(Math.floor(d / 10)) + NS1.charAt(d % 10);
+  }
+  // 返回 {monthCn, dayCn, isLeap, gz, animal}；超出 1900-2100 返回 null
+  function solarToLunar(y, m, d) {
+    if (y < 1900 || y > 2100) return null;
+    var offset = (Date.UTC(y, m - 1, d) - Date.UTC(1900, 0, 31)) / 86400000;
+    var temp = 0, i;
+    for (i = 1900; i < 2101 && offset > 0; i++) { temp = lunarYearDays(i); offset -= temp; }
+    if (offset < 0) { offset += temp; i--; }
+    var ly = i, leap = lunarLeapMonth(i), isLeap = false;
+    for (i = 1; i < 13 && offset > 0; i++) {
+      if (leap > 0 && i === (leap + 1) && !isLeap) { --i; isLeap = true; temp = lunarLeapDays(ly); }
+      else { temp = lunarMonthDays(ly, i); }
+      if (isLeap && i === (leap + 1)) isLeap = false;
+      offset -= temp;
+    }
+    if (offset === 0 && leap > 0 && i === leap + 1) { if (isLeap) isLeap = false; else { isLeap = true; --i; } }
+    if (offset < 0) { offset += temp; --i; }
+    return {
+      monthCn: (isLeap ? "闰" : "") + NS3.charAt(i - 1) + "月",
+      dayCn: lunarDayName(offset + 1),
+      gz: ganzhiYear(ly),
+      animal: ANIMAL.charAt((ly - 4) % 12),
+      isLeap: isLeap
+    };
+  }
+
+  var WEEK_CN = ["星期日", "星期一", "星期二", "星期三", "星期四", "星期五", "星期六"];
+
+  function startClock() {
+    var t = document.getElementById("clock");
+    var de = document.getElementById("cal-date");
+    var le = document.getElementById("cal-lunar");
+    var pad = function (n) { return n < 10 ? "0" + n : "" + n; };
+    var tick = function () {
+      var now = new Date();
+      t.textContent = pad(now.getHours()) + ":" + pad(now.getMinutes()) + ":" + pad(now.getSeconds());
+      var y = now.getFullYear(), mo = now.getMonth() + 1, d = now.getDate();
+      de.textContent = y + "年" + mo + "月" + d + "日 " + WEEK_CN[now.getDay()];
+      var lu = solarToLunar(y, mo, d);
+      le.textContent = lu ? (lu.gz + "·" + lu.animal + "年  " + lu.monthCn + lu.dayCn) : "农历数据超出范围";
+    };
+    tick();
+    setInterval(tick, 1000); // 本地秒级时钟，不依赖数据帧推送
+  }
+
+  initSortHeaders();
+  initViewToggle();
+  startClock();
+  connectStream();
+})();
+</script>
+</body>
+</html>

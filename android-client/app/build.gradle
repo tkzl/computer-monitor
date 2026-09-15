@@ -1,0 +1,35 @@
+plugins {
+    id 'com.android.application'
+    id 'org.jetbrains.kotlin.android'
+}
+
+android {
+    namespace 'com.qianwen.monitor'
+    compileSdk 34 // 本机已安装的平台，无需下载
+
+    defaultConfig {
+        applicationId "com.qianwen.monitor"
+        minSdk 21        // Android 5.0 起，兼容到最新版
+        targetSdk 34
+        versionCode 1
+        versionName "1.0"
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+    kotlinOptions {
+        jvmTarget = '17'
+    }
+}
+
+// 零第三方依赖：仅使用系统 WebView + SharedPreferences，兼容性最好
+dependencies {
+}

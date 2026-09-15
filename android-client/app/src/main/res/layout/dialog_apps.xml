@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 应用启动面板：HUD 卡片底色 + 标题 + 列表；宽度在代码里按屏幕比例设置 -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:background="@drawable/card_bg"
+    android:orientation="vertical"
+    android:padding="14dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:baselineAligned="false"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+
+        <TextView
+            android:id="@+id/tv_apps_title"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:fontFamily="monospace"
+            android:letterSpacing="0.25"
+            android:text="应用"
+            android:textColor="@color/accent"
+            android:textSize="14sp"
+            android:textStyle="bold" />
+
+        <!-- 关闭：圆形霓虹描边 + 矢量 X，按下圆内点亮光晕 -->
+        <ImageView
+            android:id="@+id/btn_apps_close"
+            android:layout_width="30dp"
+            android:layout_height="30dp"
+            android:layout_marginStart="8dp"
+            android:background="@drawable/btn_close_bg"
+            android:contentDescription="关闭"
+            android:padding="5dp"
+            android:src="@drawable/ic_close" />
+    </LinearLayout>
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:layout_marginTop="10dp"
+        android:background="@color/hud_line" />
+
+    <ListView
+        android:id="@+id/lv_apps"
+        android:layout_width="match_parent"
+        android:layout_height="340dp"
+        android:layout_marginTop="6dp"
+        android:cacheColorHint="@android:color/transparent"
+        android:divider="@color/hud_line"
+        android:dividerHeight="1dp"
+        android:listSelector="@color/hud_glow"
+        android:scrollbars="none" />
+</LinearLayout>

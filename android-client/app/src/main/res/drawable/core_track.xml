@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 每核竖条底槽：深色底 + 极淡青色描边，对齐网页端 .core 样式 -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
+    <solid android:color="#0DFFFFFF" />
+    <stroke android:width="1dp" android:color="#1400E5FF" />
+    <corners android:radius="2dp" />
+</shape>

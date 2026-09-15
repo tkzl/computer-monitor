@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="bg">#04070F</color>
+    <color name="text">#E6EBF5</color>
+    <color name="accent">#00E5FF</color>
+    <color name="muted">#8FB7CC</color>
+    <color name="ic_bg">#061120</color>
+    <color name="ic_ring">#00E5FF</color>
+    <color name="ic_arc">#FF2D95</color>
+
+    <!-- 科幻 HUD 配色 -->
+    <color name="hud_glow">#3300E5FF</color>       <!-- 霓虹光晕 -->
+    <color name="hud_glow_strong">#8800E5FF</color>
+    <color name="hud_line">#2A5C7A</color>          <!-- 面板描边 -->
+    <color name="hud_line_bright">#4DD9FF</color>
+    <color name="hud_panel_top">#16263A</color>     <!-- 面板渐变上 -->
+    <color name="hud_panel_bottom">#0A1420</color>  <!-- 面板渐变下 -->
+    <color name="hud_green">#37FFB4</color>
+    <color name="hud_yellow">#FFC857</color>
+    <color name="hud_red">#FF4D5E</color>
+    <color name="hud_magenta">#FF2D95</color>
+    <color name="hud_blue">#4F8CFF</color>
+    <color name="hud_track">#0E1A28</color>         <!-- 进度条底槽 -->
+</resources>

@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- HUD 右下角括号 -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="14dp"
+    android:height="14dp"
+    android:viewportWidth="14"
+    android:viewportHeight="14">
+    <path
+        android:fillColor="#00000000"
+        android:pathData="M8,13 L13,13 L13,8"
+        android:strokeColor="#FF4DD9FF"
+        android:strokeWidth="2" />
+</vector>

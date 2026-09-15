@@ -1,0 +1,140 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/bg">
+
+    <WebView
+        android:id="@+id/web"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent" />
+
+    <!-- 右上角设置按钮：修改监控服务地址 -->
+    <TextView
+        android:id="@+id/btn_settings"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="end"
+        android:layout_marginTop="10dp"
+        android:layout_marginEnd="10dp"
+        android:layout_marginRight="10dp"
+        android:background="@drawable/btn_round"
+        android:contentDescription="@string/change_address"
+        android:padding="10dp"
+        android:text="⚙"
+        android:textColor="@color/accent"
+        android:textSize="16sp" />
+
+    <!-- 连接中 / 失败提示层 -->
+    <LinearLayout
+        android:id="@+id/overlay"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="@color/bg"
+        android:gravity="center"
+        android:orientation="vertical"
+        android:padding="24dp">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/app_name"
+            android:textColor="@color/accent"
+            android:textSize="22sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="6dp"
+            android:text="@string/app_subtitle"
+            android:textColor="@color/muted"
+            android:textSize="12sp" />
+
+        <TextView
+            android:id="@+id/overlay_text"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="18dp"
+            android:gravity="center"
+            android:textColor="@color/muted"
+            android:textSize="13sp" />
+
+        <!-- 扫描状态文本 -->
+        <TextView
+            android:id="@+id/scan_status"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:gravity="center"
+            android:textColor="@color/accent"
+            android:textSize="13sp"
+            android:visibility="gone" />
+
+        <!-- 扫描结果列表 -->
+        <LinearLayout
+            android:id="@+id/scan_results"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:orientation="vertical" />
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="22dp"
+            android:orientation="horizontal">
+
+            <Button
+                android:id="@+id/btn_scan"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:background="@drawable/btn_outline"
+                android:paddingLeft="22dp"
+                android:paddingRight="22dp"
+                android:text="扫描"
+                android:textColor="@color/accent" />
+
+            <Button
+                android:id="@+id/btn_manual"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="12dp"
+                android:layout_marginLeft="12dp"
+                android:background="@drawable/btn_outline"
+                android:paddingLeft="22dp"
+                android:paddingRight="22dp"
+                android:text="手动输入"
+                android:textColor="@color/accent" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:orientation="horizontal">
+
+            <Button
+                android:id="@+id/btn_retry"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:background="@drawable/btn_outline"
+                android:paddingLeft="22dp"
+                android:paddingRight="22dp"
+                android:text="@string/retry"
+                android:textColor="@color/accent" />
+
+            <Button
+                android:id="@+id/btn_change"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="12dp"
+                android:layout_marginLeft="12dp"
+                android:background="@drawable/btn_outline"
+                android:paddingLeft="22dp"
+                android:paddingRight="22dp"
+                android:text="@string/change_address"
+                android:textColor="@color/accent" />
+        </LinearLayout>
+    </LinearLayout>
+</FrameLayout>

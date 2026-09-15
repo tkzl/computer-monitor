@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- CPU 告警遮罩：外圈实线红框 + 内侧多层递减透明红环，模拟向内晕染的内阴影；alpha 动画闪烁 -->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- 最内层：淡到近乎透明的红环（阴影尾部） -->
+    <item android:left="12dp" android:top="12dp" android:right="12dp" android:bottom="12dp">
+        <shape android:shape="rectangle">
+            <solid android:color="#00000000" />
+            <stroke android:width="3dp" android:color="#1AFF4D5E" />
+            <corners android:radius="3dp" />
+        </shape>
+    </item>
+    <item android:left="9dp" android:top="9dp" android:right="9dp" android:bottom="9dp">
+        <shape android:shape="rectangle">
+            <solid android:color="#00000000" />
+            <stroke android:width="3dp" android:color="#2AFF4D5E" />
+            <corners android:radius="3dp" />
+        </shape>
+    </item>
+    <item android:left="6dp" android:top="6dp" android:right="6dp" android:bottom="6dp">
+        <shape android:shape="rectangle">
+            <solid android:color="#00000000" />
+            <stroke android:width="3dp" android:color="#4DFF4D5E" />
+            <corners android:radius="3dp" />
+        </shape>
+    </item>
+    <item android:left="3dp" android:top="3dp" android:right="3dp" android:bottom="3dp">
+        <shape android:shape="rectangle">
+            <solid android:color="#00000000" />
+            <stroke android:width="3dp" android:color="#80FF4D5E" />
+            <corners android:radius="4dp" />
+        </shape>
+    </item>
+    <!-- 最外层：实线红边框（阴影源头） -->
+    <item>
+        <shape android:shape="rectangle">
+            <solid android:color="#00000000" />
+            <stroke android:width="3dp" android:color="@color/hud_red" />
+            <corners android:radius="6dp" />
+        </shape>
+    </item>
+</layer-list>

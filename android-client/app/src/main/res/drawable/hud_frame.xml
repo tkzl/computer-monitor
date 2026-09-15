@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- HUD 取景框：四角霓虹括号画在同一矢量里，随卡片等比缩放，不会被拉伸成色块 -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="100dp"
+    android:height="70dp"
+    android:viewportWidth="100"
+    android:viewportHeight="70">
+    <!-- 左上 -->
+    <path
+        android:fillColor="#00000000"
+        android:pathData="M2,16 L2,2 L16,2"
+        android:strokeColor="#FF4DD9FF"
+        android:strokeWidth="2" />
+    <!-- 右上 -->
+    <path
+        android:fillColor="#00000000"
+        android:pathData="M84,2 L98,2 L98,16"
+        android:strokeColor="#FF4DD9FF"
+        android:strokeWidth="2" />
+    <!-- 左下 -->
+    <path
+        android:fillColor="#00000000"
+        android:pathData="M2,54 L2,68 L16,68"
+        android:strokeColor="#FF4DD9FF"
+        android:strokeWidth="2" />
+    <!-- 右下 -->
+    <path
+        android:fillColor="#00000000"
+        android:pathData="M84,68 L98,68 L98,54"
+        android:strokeColor="#FF4DD9FF"
+        android:strokeWidth="2" />
+</vector>

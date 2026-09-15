@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">电脑监控</string>
+    <string name="app_subtitle">SYSTEM MONITOR · 科幻仪表盘</string>
+    <string name="address_title">监控服务地址</string>
+    <string name="address_help">请在电脑上以「局域网模式」启动监控程序：\n$env:MONITOR_LAN="1"; .\monitor.exe\n启动后终端会显示「手机访问地址」，手机与电脑需连接同一 Wi-Fi。</string>
+    <string name="address_hint">http://192.168.1.100:8765</string>
+    <string name="address_invalid">格式应为 http://地址:端口</string>
+    <string name="connect">连接</string>
+    <string name="cancel">取消</string>
+    <string name="connecting">正在连接\n%1$s</string>
+    <string name="connect_failed">无法连接监控服务：%1$s（%2$s）\n\n请确认：\n1. 电脑已启动监控程序（含局域网模式）\n2. 手机与电脑在同一 Wi-Fi</string>
+    <string name="load_failed">页面加载失败</string>
+    <string name="retry">重试</string>
+    <string name="change_address">更换地址</string>
+    <string name="scan">扫描</string>
+    <string name="manual_input">手动输入</string>
+    <string name="scanning">正在扫描局域网...</string>
+    <string name="no_services_found">未发现监控服务</string>
+</resources>
