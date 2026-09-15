@@ -27,6 +27,7 @@ android-client/captures/
 android-client/*.apk
 android-client/*.aab
 android-client/*.apks
+android-client/release-signing/
 
 # Signing keys and local credentials
 *.jks
