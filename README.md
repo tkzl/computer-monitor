@@ -15,6 +15,16 @@ Windows 端负责采集数据并通过 SSE 实时推送，Android 端自动发�
 - **部署简单**：Windows 端单个可执行文件即可运行，Web 页面已经内嵌，Android 端支持自动发现
 - **适合常驻显示**：针对横屏平板、低性能设备和长时间运行场景设计界面与交互
 
+## 界面预览
+
+### Windows 桌面端
+
+![Windows 桌面端监控界面](docs/images/windows-dashboard.png)
+
+### Android 老平板端
+
+<img src="docs/images/android-dashboard.png" alt="Android 老平板监控界面" width="480">
+
 ## 项目组成
 
 | 组件 | 作用 |
