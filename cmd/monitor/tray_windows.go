@@ -14,6 +14,7 @@ import (
 	"image/color"
 	"math"
 	"os"
+	"runtime"
 	"time"
 	"unsafe"
 
@@ -50,7 +51,16 @@ type trayPoint struct {
 // startTray 启动托盘图标与菜单。
 // 用 go startTray() 调用：即使底层实现阻塞也不影响主线程（主线程留给 gio app.Main）。
 func startTray() {
+	// systray 的 init 只锁定程序启动线程，go startTray() 不会继承该锁。
+	// 创建隐藏窗口和 GetMessage 必须始终在同一 OS 线程，否则协程迁移后
+	// 会读取另一线程的消息队列，表现为图标仍在但点击永久无响应。
+	runtime.LockOSThread()
+	defer runtime.UnlockOSThread()
+
 	icon := encodeICO(renderTrayIcon(16), renderTrayIcon(24), renderTrayIcon(32), renderTrayIcon(48))
+	// 在消息循环开始前设置回调，避免 onReady 协程与窗口回调并发读写。
+	systray.SetOnTapped(trayRequestShow)
+	systray.SetOnSecondaryTapped(showNativeTrayMenu)
 
 	systray.Run(func() {
 		systray.SetIcon(icon)
@@ -59,8 +69,6 @@ func startTray() {
 
 		// fyne/systray v1.12.2 的 Windows 菜单遗漏了 TrackPopupMenu 后必需的
 		// WM_NULL。接管点击后使用下方的 Win32 菜单，避免运行一段时间后右键失效。
-		systray.SetOnTapped(trayRequestShow)
-		systray.SetOnSecondaryTapped(showNativeTrayMenu)
 	}, nil)
 }
 
