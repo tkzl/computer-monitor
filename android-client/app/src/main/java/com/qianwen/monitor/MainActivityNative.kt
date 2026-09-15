@@ -831,6 +831,8 @@ class MainActivityNative : Activity() {
         val fitRadio = content.findViewById<RadioButton>(R.id.radio_slideshow_fit)
         val fillRadio = content.findViewById<RadioButton>(R.id.radio_slideshow_fill)
         val cacheCheck = content.findViewById<CheckBox>(R.id.check_slideshow_cache)
+        val clockCheck = content.findViewById<CheckBox>(R.id.check_slideshow_clock)
+        val thumbnailsCheck = content.findViewById<CheckBox>(R.id.check_slideshow_thumbnails)
         val storageText = content.findViewById<TextView>(R.id.text_slideshow_storage)
 
         enabledCheck.isChecked = config.enabled
@@ -839,6 +841,8 @@ class MainActivityNative : Activity() {
         if (config.displayMode == SlideshowSettings.MODE_FILL) fillRadio.isChecked = true
         else fitRadio.isChecked = true
         cacheCheck.isChecked = config.cacheEnabled
+        clockCheck.isChecked = config.showClock
+        thumbnailsCheck.isChecked = config.showThumbnails
 
         fun refreshStorageMessage(error: Boolean = false) {
             val free = SlideshowSettings.availableCacheBytes(this)
@@ -889,7 +893,9 @@ class MainActivityNative : Activity() {
                                 } else {
                                     SlideshowSettings.MODE_FIT
                                 },
-                                cacheEnabled = cacheCheck.isChecked
+                                cacheEnabled = cacheCheck.isChecked,
+                                showClock = clockCheck.isChecked,
+                                showThumbnails = thumbnailsCheck.isChecked
                             )
                         )
                         dialog.dismiss()

@@ -3,6 +3,7 @@ package com.qianwen.monitor
 import android.app.Activity
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.graphics.Rect
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
@@ -16,13 +17,24 @@ import java.io.File
 import java.io.FileOutputStream
 import java.net.HttpURLConnection
 import java.net.URL
+import java.util.concurrent.Executors
+import java.util.concurrent.ThreadPoolExecutor
 
-/** 由电脑端图片清单驱动的全屏幻灯片；任意触摸都会退出。 */
+/** 全屏幻灯片；底部列表可浏览选图，轻触大图退出。 */
 class SlideshowActivity : Activity() {
-    private data class Slide(val id: String, val url: String, val modified: Long)
+    private data class Slide(val id: String, val url: String, val modified: Long, val name: String)
 
     private lateinit var imageView: ImageView
     private lateinit var statusView: TextView
+    private lateinit var thumbnails: SlideThumbnailStrip
+    private var stripGesture = false
+    private var browsingThumbnails = false
+    private var imageRequest = 0
+    private var loadingImage = false
+    private var paused = true
+    private val imageExecutor = Executors.newFixedThreadPool(1) as ThreadPoolExecutor
+    private var imageJob: java.util.concurrent.Future<*>? = null
+    private val advanceSlide = Runnable { showNext(generation) }
     private val handler = Handler(Looper.getMainLooper())
     private var slides = emptyList<Slide>()
     private var index = 0
@@ -37,8 +49,11 @@ class SlideshowActivity : Activity() {
         setContentView(R.layout.activity_slideshow)
         imageView = findViewById(R.id.slideshow_image)
         statusView = findViewById(R.id.slideshow_status)
+        thumbnails = findViewById(R.id.slideshow_thumbnails)
         baseUrl = intent.getStringExtra(EXTRA_SERVER_URL)?.trimEnd('/') ?: ""
         val config = SlideshowSettings.load(this)
+        findViewById<View>(R.id.slideshow_clock).visibility = if (config.showClock) View.VISIBLE else View.GONE
+        thumbnails.visibility = if (config.showThumbnails) View.VISIBLE else View.GONE
         if (!config.enabled) {
             finish()
             return
@@ -52,8 +67,45 @@ class SlideshowActivity : Activity() {
     }
 
     override fun dispatchTouchEvent(event: MotionEvent): Boolean {
-        if (event.action == MotionEvent.ACTION_DOWN) finish()
+        if (event.actionMasked == MotionEvent.ACTION_DOWN) {
+            val bounds = Rect()
+            stripGesture = thumbnails.visibility == View.VISIBLE &&
+                thumbnails.getGlobalVisibleRect(bounds) && bounds.contains(event.rawX.toInt(), event.rawY.toInt())
+            if (stripGesture) {
+                browsingThumbnails = true
+                handler.removeCallbacks(advanceSlide)
+            } else {
+                finish()
+                return true
+            }
+        }
+        if (stripGesture) {
+            super.dispatchTouchEvent(event)
+            if (event.actionMasked == MotionEvent.ACTION_UP || event.actionMasked == MotionEvent.ACTION_CANCEL) {
+                stripGesture = false
+                scheduleNext()
+            }
+        }
         return true
+    }
+
+    private fun scheduleNext() {
+        handler.removeCallbacks(advanceSlide)
+        if (!stripGesture && !loadingImage && !paused && !isFinishing && slides.isNotEmpty()) {
+            handler.postDelayed(advanceSlide, SlideshowSettings.load(this).slideSeconds * 1000L)
+        }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        paused = false
+        scheduleNext()
+    }
+
+    override fun onPause() {
+        paused = true
+        handler.removeCallbacks(advanceSlide)
+        super.onPause()
     }
 
     override fun onWindowFocusChanged(hasFocus: Boolean) {
@@ -77,7 +129,7 @@ class SlideshowActivity : Activity() {
                         val id = item.optString("id")
                         val path = item.optString("url")
                         if (id.isNotEmpty() && path.isNotEmpty()) {
-                            list.add(Slide(id, absoluteUrl(path), item.optLong("modified")))
+                            list.add(Slide(id, absoluteUrl(path), item.optLong("modified"), item.optString("name")))
                         }
                     }
                 }
@@ -91,6 +143,17 @@ class SlideshowActivity : Activity() {
                         val resumeId = SlideshowSettings.loadResumeSlideId(this)
                         index = list.indexOfFirst { it.id == resumeId }.takeIf { it >= 0 } ?: 0
                         cleanupOldCache(list)
+                        if (thumbnails.visibility == View.VISIBLE) {
+                            val density = resources.displayMetrics.density
+                            thumbnails.submit(list.size, { list[it].name }, { position ->
+                                loadBitmap(list[position], (120 * density).toInt(), (80 * density).toInt(), false)
+                            }, { position ->
+                                index = position
+                                handler.removeCallbacks(advanceSlide)
+                                showNext(generation)
+                            })
+                            thumbnails.select(index, true)
+                        }
                         showNext(runId)
                     }
                 }
@@ -107,20 +170,28 @@ class SlideshowActivity : Activity() {
 
     private fun showNext(runId: Int) {
         if (runId != generation || slides.isEmpty() || isFinishing) return
-        val slide = slides[index % slides.size]
+        handler.removeCallbacks(advanceSlide)
+        val requestId = ++imageRequest
+        val position = index % slides.size
+        val slide = slides[position]
         index = (index + 1) % slides.size
-        Thread({
+        loadingImage = true
+        imageJob?.cancel(true)
+        imageExecutor.purge()
+        imageJob = imageExecutor.submit {
             val bitmap = try { loadBitmap(slide) } catch (_: Exception) { null }
             handler.post {
-                if (runId != generation || isFinishing) {
+                if (runId != generation || requestId != imageRequest || isFinishing) {
                     bitmap?.recycle()
                     return@post
                 }
+                loadingImage = false
                 if (bitmap != null) {
                     val old = currentBitmap
                     currentBitmap = bitmap
                     imageView.setImageBitmap(bitmap)
                     statusView.visibility = View.GONE
+                    thumbnails.select(position, !browsingThumbnails)
                     old?.takeIf { it !== bitmap && !it.isRecycled }?.recycle()
                     // index already points at the following slide. Saving its stable ID
                     // resumes from the correct position even if the manifest is reordered.
@@ -128,16 +199,18 @@ class SlideshowActivity : Activity() {
                 } else {
                     showStatus("图片加载失败，正在跳过…")
                 }
-                handler.postDelayed(
-                    { showNext(runId) },
-                    SlideshowSettings.load(this).slideSeconds * 1000L
-                )
+                scheduleNext()
             }
-        }, "slideshow-image").start()
+        }
     }
 
-    private fun loadBitmap(slide: Slide): Bitmap? {
-        var cacheEnabled = SlideshowSettings.load(this).cacheEnabled
+    private fun loadBitmap(
+        slide: Slide,
+        targetWidth: Int = resources.displayMetrics.widthPixels,
+        targetHeight: Int = resources.displayMetrics.heightPixels,
+        allowCache: Boolean = true
+    ): Bitmap? {
+        var cacheEnabled = allowCache && SlideshowSettings.load(this).cacheEnabled
         if (cacheEnabled && SlideshowSettings.disableCacheIfLow(this)) cacheEnabled = false
         val directory = File(cacheDir, "slideshow").also { it.mkdirs() }
         val suffix = slide.url.substringBefore('?').substringAfterLast('.', "img")
@@ -163,7 +236,7 @@ class SlideshowActivity : Activity() {
             }
         }
         return try {
-            decodeSampled(source)
+            decodeSampled(source, targetWidth, targetHeight)
         } finally {
             if (!cacheEnabled || source.name.endsWith(".part")) source.delete()
         }
@@ -178,6 +251,7 @@ class SlideshowActivity : Activity() {
                 FileOutputStream(target).use { output ->
                     val buffer = ByteArray(64 * 1024)
                     while (true) {
+                        if (Thread.currentThread().isInterrupted) throw InterruptedException()
                         val count = input.read(buffer)
                         if (count < 0) break
                         output.write(buffer, 0, count)
@@ -192,16 +266,15 @@ class SlideshowActivity : Activity() {
         }
     }
 
-    private fun decodeSampled(file: File): Bitmap? {
+    private fun decodeSampled(file: File, targetWidth: Int, targetHeight: Int): Bitmap? {
         val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
         BitmapFactory.decodeFile(file.absolutePath, bounds)
         if (bounds.outWidth <= 0 || bounds.outHeight <= 0) return null
-        val metrics = resources.displayMetrics
         var sample = 1
-        while (bounds.outWidth / (sample * 2) >= metrics.widthPixels &&
-            bounds.outHeight / (sample * 2) >= metrics.heightPixels) sample *= 2
+        while (bounds.outWidth / (sample * 2) >= targetWidth &&
+            bounds.outHeight / (sample * 2) >= targetHeight) sample *= 2
         // 极端全景图可能只有一边超过屏幕很多；再以像素总量设上限，避免老平板 OOM。
-        val maxPixels = metrics.widthPixels.toLong() * metrics.heightPixels.toLong() * 4L
+        val maxPixels = targetWidth.toLong() * targetHeight.toLong() * 4L
         while (bounds.outWidth.toLong() * bounds.outHeight.toLong() /
             (sample.toLong() * sample.toLong()) > maxPixels) {
             sample *= 2
@@ -240,6 +313,10 @@ class SlideshowActivity : Activity() {
 
     override fun onDestroy() {
         generation++
+        imageRequest++
+        imageJob?.cancel(true)
+        imageExecutor.shutdownNow()
+        thumbnails.close()
         handler.removeCallbacksAndMessages(null)
         imageView.setImageDrawable(null)
         currentBitmap?.takeIf { !it.isRecycled }?.recycle()

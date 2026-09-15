@@ -86,6 +86,28 @@
         </RadioGroup>
 
         <CheckBox
+            android:id="@+id/check_slideshow_clock"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:text="图片上显示实时时间"
+            android:textColor="@color/text" />
+
+        <CheckBox
+            android:id="@+id/check_slideshow_thumbnails"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="底部显示可左右滑动的图片列表"
+            android:textColor="@color/text" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="滑动底部列表浏览，轻触小图切换；轻触大图退出幻灯片。"
+            android:textColor="@color/muted"
+            android:textSize="12sp" />
+
+        <CheckBox
             android:id="@+id/check_slideshow_cache"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"

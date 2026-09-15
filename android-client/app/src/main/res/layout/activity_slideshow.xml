@@ -11,6 +11,29 @@
         android:background="#000000"
         android:contentDescription="幻灯片图片" />
 
+    <TextClock
+        android:id="@+id/slideshow_clock"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="top|end"
+        android:layout_margin="24dp"
+        android:padding="12dp"
+        android:background="#9904070F"
+        android:fontFamily="monospace"
+        android:format12Hour="HH:mm:ss"
+        android:format24Hour="HH:mm:ss"
+        android:textColor="#FFFFFF"
+        android:textSize="40sp"
+        android:visibility="gone" />
+
+    <com.qianwen.monitor.SlideThumbnailStrip
+        android:id="@+id/slideshow_thumbnails"
+        android:layout_width="match_parent"
+        android:layout_height="100dp"
+        android:layout_gravity="bottom"
+        android:background="#D904070F"
+        android:visibility="gone" />
+
     <TextView
         android:id="@+id/slideshow_status"
         android:layout_width="wrap_content"
