@@ -94,6 +94,14 @@
             android:textColor="@color/text" />
 
         <CheckBox
+            android:id="@+id/check_slideshow_move_clock"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:paddingStart="20dp"
+            android:text="时间屏保移动（斜向移动，碰边反弹）"
+            android:textColor="@color/text" />
+
+        <CheckBox
             android:id="@+id/check_slideshow_thumbnails"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"

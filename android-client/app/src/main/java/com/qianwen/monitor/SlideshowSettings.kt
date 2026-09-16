@@ -10,7 +10,8 @@ data class SlideshowConfig(
     val displayMode: String,
     val cacheEnabled: Boolean,
     val showClock: Boolean = false,
-    val showThumbnails: Boolean = false
+    val showThumbnails: Boolean = false,
+    val moveClock: Boolean = false
 )
 
 /** Shared slideshow preferences and the low-storage cache safety guard. */
@@ -31,6 +32,7 @@ object SlideshowSettings {
     private const val KEY_RESUME_SLIDE_ID = "slideshow_resume_slide_id"
     private const val KEY_SHOW_CLOCK = "slideshow_show_clock"
     private const val KEY_SHOW_THUMBNAILS = "slideshow_show_thumbnails"
+    private const val KEY_MOVE_CLOCK = "slideshow_move_clock"
 
     fun load(context: Context): SlideshowConfig {
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
@@ -44,7 +46,8 @@ object SlideshowSettings {
             displayMode = mode,
             cacheEnabled = prefs.getBoolean(KEY_CACHE_ENABLED, false),
             showClock = prefs.getBoolean(KEY_SHOW_CLOCK, false),
-            showThumbnails = prefs.getBoolean(KEY_SHOW_THUMBNAILS, false)
+            showThumbnails = prefs.getBoolean(KEY_SHOW_THUMBNAILS, false),
+            moveClock = prefs.getBoolean(KEY_MOVE_CLOCK, false)
         )
     }
 
@@ -61,6 +64,7 @@ object SlideshowSettings {
             .putBoolean(KEY_CACHE_ENABLED, config.cacheEnabled)
             .putBoolean(KEY_SHOW_CLOCK, config.showClock)
             .putBoolean(KEY_SHOW_THUMBNAILS, config.showThumbnails)
+            .putBoolean(KEY_MOVE_CLOCK, config.moveClock)
             .apply()
     }
 

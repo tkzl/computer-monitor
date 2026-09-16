@@ -27,6 +27,7 @@ class SlideshowActivity : Activity() {
     private lateinit var imageView: ImageView
     private lateinit var statusView: TextView
     private lateinit var thumbnails: SlideThumbnailStrip
+    private var clockScreensaver: ClockScreensaver? = null
     private var stripGesture = false
     private var browsingThumbnails = false
     private var imageRequest = 0
@@ -52,8 +53,10 @@ class SlideshowActivity : Activity() {
         thumbnails = findViewById(R.id.slideshow_thumbnails)
         baseUrl = intent.getStringExtra(EXTRA_SERVER_URL)?.trimEnd('/') ?: ""
         val config = SlideshowSettings.load(this)
-        findViewById<View>(R.id.slideshow_clock).visibility = if (config.showClock) View.VISIBLE else View.GONE
+        val clock = findViewById<View>(R.id.slideshow_clock)
+        clock.visibility = if (config.showClock) View.VISIBLE else View.GONE
         thumbnails.visibility = if (config.showThumbnails) View.VISIBLE else View.GONE
+        if (config.showClock && config.moveClock) clockScreensaver = ClockScreensaver(clock, thumbnails)
         if (!config.enabled) {
             finish()
             return
@@ -99,11 +102,13 @@ class SlideshowActivity : Activity() {
     override fun onResume() {
         super.onResume()
         paused = false
+        clockScreensaver?.start()
         scheduleNext()
     }
 
     override fun onPause() {
         paused = true
+        clockScreensaver?.stop()
         handler.removeCallbacks(advanceSlide)
         super.onPause()
     }
@@ -312,6 +317,7 @@ class SlideshowActivity : Activity() {
     }
 
     override fun onDestroy() {
+        clockScreensaver?.stop()
         generation++
         imageRequest++
         imageJob?.cancel(true)
